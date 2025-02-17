@@ -2,7 +2,7 @@
   "name": "caloogy",
   "version": "0.1.0",
   "private": true,
-  "homepage": "http://caloogy.top",
+  "homepage": "https://caloogy.top",
   "dependencies": {
     "@react-spring/web": "^9.7.5",
     "@react-three/drei": "^9.121.4",
