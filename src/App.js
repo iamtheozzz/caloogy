@@ -220,27 +220,27 @@ const researchItems = [
   {
     title: "Focus on Climate Change",
     desc: "Using AI to monitor and analyze climate patterns",
-    video: `${process.env.PUBLIC_URL}/videos/climate.mp4`
+    video: "/videos/climate.mp4"
   },
   {
     title: "Stock Prediction and Risk Analysis",
     desc: "Advanced algorithms for market prediction",
-    video: `${process.env.PUBLIC_URL}/videos/stock.mp4`
+    video: "/videos/stock.mp4"
   },
   {
     title: "AI Education System",
     desc: "Personalized learning through artificial intelligence",
-    video: `${process.env.PUBLIC_URL}/videos/education.mp4`
+    video: "/videos/education.mp4"
   },
   {
     title: "Human-oriented",
     desc: "AI technology that puts humans first",
-    video: `${process.env.PUBLIC_URL}/videos/human.mp4`
+    video: "/videos/human.mp4"
   },
   {
     title: "Environmental Friendly",
     desc: "Sustainable AI solutions for a better future",
-    video: `${process.env.PUBLIC_URL}/videos/tree.mp4`
+    video: "/videos/tree.mp4"
   }
 ];
 
@@ -567,7 +567,7 @@ function StockVideo() {
             playsInline
             preload="auto"
           >
-            <source src={`${process.env.PUBLIC_URL}/videos/stock-analysis.mp4`} type="video/mp4" />
+            <source src="/videos/stock-analysis.mp4" type="video/mp4" />
             Your browser does not support the video tag.
           </video>
           {error && (
@@ -1251,7 +1251,7 @@ function App() {
               transform: `translate3d(0, ${scrollY * 0.5}px, 0)`,
             }}
           >
-            <source src={`${process.env.PUBLIC_URL}/videos/dance.mp4`} type="video/mp4" />
+            <source src="/videos/dance.mp4" type="video/mp4" />
           </video>
           <motion.div 
             className="hero-overlay"
@@ -1609,32 +1609,32 @@ function App() {
               >
                 {[
                   {
-                    video: "/caloogy/videos/v1.mp4",
+                    video: "/videos/v1.mp4",
                     title: "AI-Powered Climate Analysis",
                     desc: "Advanced algorithms for environmental monitoring"
                   },
                   {
-                    video: "/caloogy/videos/v2.mp4",
+                    video: "/videos/v2.mp4",
                     title: "Smart Financial Planning",
                     desc: "Intelligent investment strategies"
                   },
                   {
-                    video: "/caloogy/videos/v3.mp4",
+                    video: "/videos/v3.mp4",
                     title: "Healthcare Innovation",
                     desc: "Revolutionary medical diagnosis"
                   },
                   {
-                    video: "/caloogy/videos/v4.mp4",
+                    video: "/videos/v4.mp4",
                     title: "Education Technology",
                     desc: "Personalized learning experience"
                   },
                   {
-                    video: "/caloogy/videos/v5.mp4",
+                    video: "/videos/v5.mp4",
                     title: "Smart City Solutions",
                     desc: "Urban planning optimization"
                   },
                   {
-                    video: "/caloogy/videos/v6.mp4",
+                    video: "/videos/v6.mp4",
                     title: "Robotics Integration",
                     desc: "Next-generation automation"
                   }
@@ -1717,7 +1717,7 @@ function App() {
                   muted 
                   playsInline
                 >
-                  <source src={`${process.env.PUBLIC_URL}/videos/robot.mp4`} type="video/mp4" />
+                  <source src="/videos/robot.mp4" type="video/mp4" />
                 </video>
                 <div className="story-content">
                   <span className="story-tag">Featured</span>
@@ -1742,7 +1742,7 @@ function App() {
                   muted 
                   playsInline
                 >
-                  <source src={`${process.env.PUBLIC_URL}/videos/ski.mp4`} type="video/mp4" />
+                  <source src="/videos/ski.mp4" type="video/mp4" />
                 </video>
                 <div className="story-content">
                   <h3>Enhance sports performance to a new era</h3>
@@ -1765,7 +1765,7 @@ function App() {
                   muted 
                   playsInline
                 >
-                  <source src={`${process.env.PUBLIC_URL}/videos/chess.mp4`} type="video/mp4" />
+                  <source src="/videos/chess.mp4" type="video/mp4" />
                 </video>
                 <div className="story-content">
                   <h3>A chess master powered by Caloogy AI</h3>
@@ -1800,7 +1800,7 @@ function App() {
                 transition={{ duration: 0.8 }}
               >
                 <img 
-                  src={`${process.env.PUBLIC_URL}/images/selfie.jpeg`} 
+                  src="/images/selfie.jpeg" 
                   alt="Leader" 
                   className="leader-photo"
                 />
@@ -1818,8 +1818,8 @@ function App() {
                 </p>
                 <motion.a
                   href="http://itsmyspace.xyz"
-          target="_blank"
-          rel="noopener noreferrer"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="personal-website-btn"
                   whileHover={{ 
                     scale: 1.05,
@@ -1950,7 +1950,7 @@ function App() {
               <p className="map-address">Beverly Hills, Los Angeles, California, United States</p>
             </motion.div>
           </div>
-    </div>
+        </div>
       </section>
       <motion.section className="contact-section">
         <div className="container">
