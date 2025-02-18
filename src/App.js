@@ -1609,32 +1609,32 @@ function App() {
               >
                 {[
                   {
-                    video: `${process.env.PUBLIC_URL}/videos/v1.mp4`,
+                    video: "/caloogy/videos/v1.mp4",
                     title: "AI-Powered Climate Analysis",
                     desc: "Advanced algorithms for environmental monitoring"
                   },
                   {
-                    video: `${process.env.PUBLIC_URL}/videos/v2.mp4`,
+                    video: "/caloogy/videos/v2.mp4",
                     title: "Smart Financial Planning",
                     desc: "Intelligent investment strategies"
                   },
                   {
-                    video: `${process.env.PUBLIC_URL}/videos/v3.mp4`,
+                    video: "/caloogy/videos/v3.mp4",
                     title: "Healthcare Innovation",
                     desc: "Revolutionary medical diagnosis"
                   },
                   {
-                    video: `${process.env.PUBLIC_URL}/videos/v4.mp4`,
+                    video: "/caloogy/videos/v4.mp4",
                     title: "Education Technology",
                     desc: "Personalized learning experience"
                   },
                   {
-                    video: `${process.env.PUBLIC_URL}/videos/v5.mp4`,
+                    video: "/caloogy/videos/v5.mp4",
                     title: "Smart City Solutions",
                     desc: "Urban planning optimization"
                   },
                   {
-                    video: `${process.env.PUBLIC_URL}/videos/v6.mp4`,
+                    video: "/caloogy/videos/v6.mp4",
                     title: "Robotics Integration",
                     desc: "Next-generation automation"
                   }
