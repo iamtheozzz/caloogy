@@ -1,11 +1,39 @@
 import './App.css';
-import { motion, useScroll, useTransform, useInView } from 'framer-motion';
+import { motion, useScroll, useTransform, useInView, AnimatePresence } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import { useSpring, animated } from '@react-spring/web';
 import { Suspense } from 'react';
 import backgroundImage from './assets/painting1.jpeg';
+import { auth } from './firebase';
+import AuthModal from './components/AuthModal';
+import AuthButton from './components/AuthButton';
+import { getDoc, doc, updateDoc } from 'firebase/firestore';
+import { db } from './firebase';
+import StudentVerificationModal from './components/StudentVerificationModal';
+import FYSAVerificationModal from './components/FYSAVerificationModal';
 
-function Navbar() {
+
+function Navbar({ isAuthModalOpen, setIsAuthModalOpen }) {
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY;
+      setIsScrolled(scrollPosition > 50);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(user => {
+      setUser(user);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const scrollToSection = (id) => {
     const element = document.getElementById(id);
     const navbarHeight = document.querySelector('.navbar').offsetHeight;
@@ -14,19 +42,21 @@ function Navbar() {
   };
 
   return (
-    <nav className="navbar">
+    <nav className={`navbar ${isScrolled ? 'scrolled' : ''}`}>
       <div className="container">
-        <a href="#" className="logo">CALOOGY AI</a>
+        <a href="#" className="logo">CALOOGY</a>
         <div className="nav-links">
-          <a href="#vision">Vision</a>
-          <a href="#technology">Technology</a>
-          <a href="#solutions">Solutions</a>
+          <a href="#student">Student</a>
           <a href="#services">Services</a>
-          <a href="#impact">Impact</a>
           <a href="#stories">Stories</a>
-          <a href="#ailab">AI Lab</a>
+         
+          <AuthButton onShowAuthModal={() => setIsAuthModalOpen(true)} />
         </div>
       </div>
+      <AuthModal 
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
     </nav>
   );
 }
@@ -139,25 +169,7 @@ function ParticleEffect() {
   );
 }
 
-// 更新技术卡片数据
-const techCards = [
-  { 
-    title: "Focus on Climate Change", 
-    desc: "Using AI to predict climate change and help people to reduce their carbon footprint." 
-  },
-  { 
-    title: "Stock  Prediction and Risk Analysis", 
-    desc: "Using Advanced machine learning to predict trends and draw charts without internet connection" 
-  },
-  { 
-    title: "Embedded on MacPad offline", 
-    desc: "Tiny language model running on your devices without internet connection, fully protect your security and privacy." 
-  },
-  { 
-    title: "Low Cost AI Creation", 
-    desc: "Open source AI platform created from scratch, with a focus on human-oriented and community collaboration." 
-  }
-];
+
 
 // 修改 ResearchVideo 组件，恢复原来的动画效果
 function ResearchVideo({ title, desc, video }) {
@@ -200,7 +212,8 @@ function ResearchVideo({ title, desc, video }) {
           muted 
           playsInline
         >
-          <source src={video} type="video/mp4" />
+          <source src={video.mp4} type="video/mp4" />
+          <source src={video.webm} type="video/webm" />
         </video>
         <motion.h2 
           className="research-title"
@@ -218,29 +231,37 @@ function ResearchVideo({ title, desc, video }) {
 // 更新研究项目数据，添加两个新视频
 const researchItems = [
   {
-    title: "Focus on Climate Change",
-    desc: "Using AI to monitor and analyze climate patterns",
-    video: "/videos/climate.mp4"
+    title: "Intelligent City Around Us",
+    desc: "Using AI to build a smart city",
+    video: {
+      mp4: "/videos/city.mp4",
+      webm: "/videos/city.webm"
+    }
   },
   {
-    title: "Stock Prediction and Risk Analysis",
+    title: "Risk Management",
     desc: "Advanced algorithms for market prediction",
-    video: "/videos/stock.mp4"
+    video: {
+      mp4: "/videos/stock.mp4",
+      webm: "/videos/stock.webm"
+    }
   },
   {
     title: "AI Education System",
     desc: "Personalized learning through artificial intelligence",
-    video: "/videos/education.mp4"
+    video: {
+      mp4: "/videos/education.mp4",
+      webm: "/videos/education.webm"
+    }
   },
-  {
-    title: "Human-oriented",
-    desc: "AI technology that puts humans first",
-    video: "/videos/human.mp4"
-  },
+  
   {
     title: "Environmental Friendly",
     desc: "Sustainable AI solutions for a better future",
-    video: "/videos/tree.mp4"
+    video: {
+      mp4: "/videos/sky.mp4",
+      webm: "/videos/sky.webm"
+    }
   }
 ];
 
@@ -568,6 +589,7 @@ function StockVideo() {
             preload="auto"
           >
             <source src="/videos/stock-analysis.mp4" type="video/mp4" />
+            <source src="/videos/stock-analysis.webm" type="video/webm" />
             Your browser does not support the video tag.
           </video>
           {error && (
@@ -688,107 +710,87 @@ function ResearchImage({ title, desc, index }) {
   </div>
 </div>
 
+// 修改 TypewriterText 组件
 function TypewriterText() {
-  const text = "One AI, endless possibilities";
-  const [displayedText, setDisplayedText] = useState('');
-  
+  const [user, setUser] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
+
   useEffect(() => {
-    let index = 0;
-    const timer = setInterval(() => {
-      if (index <= text.length) {
-        setDisplayedText(text.substring(0, index));
-        index++;
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      setUser(user);
+      if (user) {
+        try {
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists()) {
+            setUserProfile(userDoc.data());
+          }
+        } catch (error) {
+          console.error('Error fetching user profile:', error);
+        }
       } else {
-        clearInterval(timer);
+        setUserProfile(null);
       }
-    }, 100);
-    
-    return () => clearInterval(timer);
+    });
+    return () => unsubscribe();
   }, []);
 
   return (
-    <motion.h1
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.8, delay: 0.5 }}
-    >
-      {displayedText}
-      <motion.span
-        animate={{ opacity: [1, 0] }}
-        transition={{ duration: 0.5, repeat: Infinity }}
+    <div className="typewriter-container">
+      <motion.h1
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8 }}
       >
-        |
-      </motion.span>
-    </motion.h1>
+        Hi{userProfile?.firstName ? `, ${userProfile.firstName}` : ''}
+      </motion.h1>
+      <motion.h2
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, delay: 0.2 }}
+      >
+        Welcome to the home of Caloogy AI
+      </motion.h2>
+    </div>
   );
 }
 
 // 更新服务数据
 const services = [
   {
-    icon: "🌐",
-    title: "Website Development",
-    desc: "Professional website development with modern technologies and responsive design. We create stunning, fast-loading websites that drive results.",
-    features: ["Custom Design", "SEO Optimization", "Mobile First", "24/7 Support"]
+    icon: "🪙",
+    title: "Calcoin",
+    desc: "A decentralized cryptocurrency platform built on the Caloogy's blockchain. Calcoin is a digital currency for transactions on the Caloogy platform.",
+    features: ["Decentralized", "Secure", "Fast", "Low Cost"]
   },
   {
-    icon: "📈",
-    title: "AI Stock Analysis",
-    desc: "Advanced stock market analysis powered by artificial intelligence. Get real-time insights and predictions for smarter investment decisions.",
-    features: ["Real-time Analysis", "Risk Assessment", "Portfolio Optimization", "Market Predictions"]
+    icon: "🐥",
+    title: "Silkie",
+    desc: "A chat app for people to randomly chat with each other without knowing each other's identity. Everyone is anonymous and it's a fully free platform to find someone that's really interesting.",
+    features: ["Anonymous", "Free", "Random", "Fun"]
   },
   {
-    icon: "🌍",
-    title: "Climate Change Action",
-    desc: "Join our mission to combat climate change. We provide AI-powered solutions to help reduce carbon footprint and promote sustainability.",
-    features: ["Carbon Tracking", "Green Solutions", "Impact Analysis", "Community Projects"]
+    icon: "🧑‍🚀",
+    title: "BHM",
+    desc: "BHM (Black Hole Mission) is a game that allows people to explore the universe and finish the mission in AR mode.",
+    features: ["AR", "Fun", "Educational", "Adventure"]
   },
   {
-    icon: "📱",
-    title: "iOS Development",
-    desc: "Custom iOS application development with cutting-edge features. We build intuitive, powerful apps that users love.",
-    features: ["Native Apps", "Swift UI", "Cloud Integration", "App Store Support"]
+    icon: "💻",
+    title: "MacPad",
+    desc: "Turn your ipad into a mac, creating a simple and convenient system for innovation without constraints.",
+    features: ["Productivity", "Simple", "Creative", "Convenient"]
   },
   {
     icon: "🧠",
-    title: "AI Brain-Computer Interface Therapy",
-    desc: "Revolutionary psychological treatment using AI-powered brain-computer interface technology for better mental health outcomes.",
+    title: "AI Brain-Computer Therapy",
+    desc: "Revolutionary Cognitive Science treatment using AI-powered brain-computer interface technology for better mental health outcomes.",
     features: ["Neural Feedback", "Personalized Treatment", "Real-time Monitoring", "Safe & Non-invasive"]
   },
   {
-    icon: "🤖",
-    title: "Companion Robots",
-    desc: "Advanced AI companion robots designed to provide emotional support and assistance in daily life.",
-    features: ["Emotional Intelligence", "24/7 Companionship", "Task Assistance", "Adaptive Learning"]
-  }
-];
-
-// 修改 mathTutorials 数组，移除测试视频
-const mathTutorials = [
-  {
-    title: "Matrix",
-    description: "Caloogy can help with matrix and linear algebra operations",
-    video: "/videos/matrix.mp4"
-  },
-  {
-    title: "Trigonometry",
-    description: "It can also help with trigonometry, hypobolic functions and Maclaurin series",
-    video: "/videos/trigonometry.mp4"
-  },
-  {
-    title: "Calculus",
-    description: "Derivatives, integrals and differential equations",
-    video: "/videos/calculus.mp4"
-  },
-  {
-    title: "Statistics & Probability",
-    description: "Learn data analysis, probability distributions and statistical inference with practical examples",
-    video: "/videos/statistics.mp4"
-  },
-  {
-    title: "Complex Analysis and Polar Coordinates",
-    description: "Complex numbers, polar coordinates and their calculations",
-    video: "/videos/complex.mp4"
+    icon: "♾️",
+    title: "Big Questions",
+    desc: "By solving questions in a streak, you can get a chance to rank in the leaderboard and win rewards.",
+    features: ["Fun", "Competitive", "Educational", "Rewarding"]
   }
 ];
 
@@ -806,7 +808,7 @@ function MathVideo({ video, isActive }) {
 
     const handleLoadedMetadata = () => {
       setIsVideoReady(true);
-      console.log(`Video metadata loaded: ${video}`);
+      console.log(`Video metadata loaded: ${video.mp4}`);
     };
 
     videoElement.addEventListener('loadedmetadata', handleLoadedMetadata);
@@ -822,7 +824,7 @@ function MathVideo({ video, isActive }) {
     if (!videoElement || !isVideoReady) return;
 
     const handleError = (e) => {
-      console.error(`Video error for ${video}:`, e);
+      console.error(`Video error for ${video.mp4}:`, e);
       setError(true);
       setErrorMessage(`Error playing video: ${e.message || 'Unknown error'}`);
     };
@@ -890,8 +892,8 @@ function MathVideo({ video, isActive }) {
         playsInline
         muted
         loop
+        autoPlay
         preload="auto"
-        poster="/images/video-placeholder.jpg" // 添加占位图
         style={{
           width: '100%',
           height: '100%',
@@ -899,7 +901,8 @@ function MathVideo({ video, isActive }) {
           borderRadius: '20px'
         }}
       >
-        <source src={`${process.env.PUBLIC_URL}${video}`} type="video/mp4" />
+        <source src={`${video.mp4}`} type="video/mp4" />
+        <source src={`${video.webm}`} type="video/webm" />
         Your browser does not support the video tag.
       </video>
       {error && (
@@ -911,33 +914,135 @@ function MathVideo({ video, isActive }) {
   );
 }
 
+// 修改 NewYorkSection 组件
+function NewYorkSection() {
+  return (
+    <motion.section 
+      className="newyork-section"
+      initial={{ opacity: 0 }}
+      whileInView={{ opacity: 1 }}
+      transition={{ duration: 0.8 }}
+    >
+      <div className="container">
+        <motion.h2 
+          className="section-title"
+          initial={{ y: 50, opacity: 0 }}
+          whileInView={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.8 }}
+        >
+          Caloogy in New York
+        </motion.h2>
+        
+        <div className="newyork-content">
+          <motion.div 
+            className="newyork-image"
+            initial={{ x: -100, opacity: 0 }}
+            whileInView={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.8 }}
+          >
+            <img src="/images/newyork.png" alt="New York City" className="newyork-img" />
+          </motion.div>
+          
+          <motion.div 
+            className="newyork-text"
+            initial={{ x: 100, opacity: 0 }}
+            whileInView={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
+            <div className="erasmus-quote">
+              <h3>Erasmus's New York Diary</h3>
+              <p>
+                "As an AI robot exploring the vibrant streets of New York, I'm constantly amazed by the city's energy and diversity. 
+                From the towering skyscrapers to the bustling streets, every corner tells a unique story. 
+                The city's blend of technology and culture perfectly mirrors Caloogy's vision of innovation and human connection."
+              </p>
+              <p>
+                "Walking through Central Park, I observe how nature and urban life coexist harmoniously - 
+                much like how we at Caloogy strive to balance technological advancement with environmental consciousness. 
+                New York's spirit of endless possibilities inspires us to push the boundaries of what AI can achieve."
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    </motion.section>
+  );
+}
+
+// 添加新的 MarsSection 组件
+function MarsSection() {
+  return (
+    <motion.section 
+      className="mars-section"
+      initial={{ opacity: 0 }}
+      whileInView={{ opacity: 1 }}
+      transition={{ duration: 0.8 }}
+    >
+      <div className="container">
+        <motion.h2 
+          className="section-title"
+          initial={{ y: 50, opacity: 0 }}
+          whileInView={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.8 }}
+        >
+          Caloogy on Mars
+        </motion.h2>
+        
+        <div className="mars-content">
+          <motion.div 
+            className="mars-image"
+            initial={{ x: -100, opacity: 0 }}
+            whileInView={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.8 }}
+          >
+            <img src="/images/mars.png" alt="Mars Base" className="mars-img" />
+          </motion.div>
+          
+          <motion.div 
+            className="mars-text"
+            initial={{ x: 100, opacity: 0 }}
+            whileInView={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
+            <div className="mars-info">
+              <h3>Our Martian Frontier</h3>
+              <p>
+                "At Caloogy's Mars Research Base, we're pioneering the future of interplanetary AI research. 
+                Our state-of-the-art facility serves as a testing ground for advanced AI systems designed to operate in extreme conditions."
+              </p>
+              <p>
+                "The Mars base represents our commitment to pushing the boundaries of technological innovation. 
+                Here, our AI systems learn to adapt to the harsh Martian environment, developing new capabilities 
+                that will shape the future of space exploration and human-AI collaboration."
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    </motion.section>
+  );
+}
+
 function App() {
   const containerRef = useRef(null);
-  const carouselRef1 = useRef(null);
-  const carouselRef2 = useRef(null);
-  const carouselRef3 = useRef(null);
-  const [width, setWidth] = useState(0);
   const { scrollYProgress } = useScroll();
   const [scrollY, setScrollY] = useState(0);
-  const productCarouselRef = useRef(null);
+  const [user, setUser] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isStudentVerificationOpen, setIsStudentVerificationOpen] = useState(false);
+  const [isFYSAVerificationOpen, setIsFYSAVerificationOpen] = useState(false);
 
-  // 为每个section创建ref
-  const section1Ref = useRef(null);
-  const section2Ref = useRef(null);
-  const section3Ref = useRef(null);
+  // 更新 sectionColors，只保留需要的颜色
+  const sectionColors = {
+    solutions: '#FFB8D0',
+    impact: '#D0B8FF',
+    stories: '#E8FFF3',
+    leader: '#FFFFFF',
+    ailab: '#0000CD'
+  };
 
-  // 使用framer-motion的useInView hook检测每个section是否在视图中
-  const isInView1 = useInView(section1Ref, { once: false });
-  const isInView2 = useInView(section2Ref, { once: false });
-  const isInView3 = useInView(section3Ref, { once: false });
-
-  // 添加卡片激活状态处理
-  const [activeCardIndex, setActiveCardIndex] = useState(3); // 默认中间卡片
-
-  // 修改初始值为 0，确保不会超出数组范围
-  const [currentVideo, setCurrentVideo] = useState(0);
-
-  // 添加 ref 和 scroll progress
+  // 删除不需要的 refs
   const impactSectionRef = useRef(null);
   const { scrollYProgress: impactScrollProgress } = useScroll({
     target: impactSectionRef,
@@ -981,79 +1086,12 @@ function App() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  useEffect(() => {
-    // 计算轮播图的总宽度
-    const scrollWidth = carouselRef1.current.scrollWidth;
-    const clientWidth = carouselRef1.current.clientWidth;
-    setWidth(scrollWidth - clientWidth);
-
-    // 自动滚动效果
-    const carousel1 = carouselRef1.current;
-    const carousel2 = carouselRef2.current;
-    const carousel3 = carouselRef3.current;
-    
-    let scrollInterval1 = setInterval(() => {
-      if (carousel1.scrollLeft >= carousel1.scrollWidth - carousel1.clientWidth) {
-        carousel1.scrollLeft = 0;
-      } else {
-        carousel1.scrollLeft += 2; // 加快速度
-      }
-    }, 20);
-
-    let scrollInterval2 = setInterval(() => {
-      if (carousel2.scrollLeft <= 0) {
-        carousel2.scrollLeft = carousel2.scrollWidth - carousel2.clientWidth;
-      } else {
-        carousel2.scrollLeft -= 2; // 反向滚动
-      }
-    }, 20);
-
-    let scrollInterval3 = setInterval(() => {
-      if (carousel3.scrollLeft >= carousel3.scrollWidth - carousel3.clientWidth) {
-        carousel3.scrollLeft = 0;
-      } else {
-        carousel3.scrollLeft += 2;
-      }
-    }, 20);
-
-    return () => {
-      clearInterval(scrollInterval1);
-      clearInterval(scrollInterval2);
-      clearInterval(scrollInterval3);
-    };
-  }, []);
-
   // 使用react-spring创建动画
   const fadeIn = useSpring({
     from: { opacity: 0, transform: 'translateY(50px)' },
     to: { opacity: 1, transform: 'translateY(0px)' },
     config: { duration: 1000 }
   });
-
-  // 修改卡片数据以确保每个轨道有相同数量的卡片
-  const cardSets = {
-    set1: [
-      { number: "01", title: "Empowering Humanity", desc: "Creating AI that enhances human capabilities." },
-      { number: "02", title: "Ethical Innovation", desc: "Developing responsible AI with transparency." },
-      { number: "03", title: "Global Impact", desc: "Making AI accessible worldwide." },
-      { number: "04", title: "Future Ready", desc: "Preparing for tomorrow's challenges." },
-      { number: "05", title: "Collaborative Growth", desc: "Building together with our community." }
-    ],
-    set2: [
-      { number: "06", title: "Data Security", desc: "Protecting information with advanced encryption." },
-      { number: "07", title: "Cloud Integration", desc: "Seamless deployment across platforms." },
-      { number: "08", title: "AI Learning", desc: "Continuous improvement through machine learning." },
-      { number: "09", title: "Scalable Solutions", desc: "Growing with your business needs." },
-      { number: "10", title: "Custom Development", desc: "Tailored solutions for unique challenges." }
-    ],
-    set3: [
-      { number: "11", title: "AI Research", desc: "Pushing the boundaries of possibility." },
-      { number: "12", title: "Community Focus", desc: "Building together with developers." },
-      { number: "13", title: "Innovation Lab", desc: "Exploring new AI frontiers." },
-      { number: "14", title: "Global Network", desc: "Connected worldwide expertise." },
-      { number: "15", title: "Future Vision", desc: "Shaping tomorrow's technology." }
-    ]
-  };
 
   // 添加滚动动画效果
   const scale = useTransform(scrollYProgress, [0, 1], [1, 1.2]);
@@ -1084,17 +1122,6 @@ function App() {
     window.addEventListener('scroll', handleTechScroll);
     return () => window.removeEventListener('scroll', handleTechScroll);
   }, []);
-
-  // 更新颜色配置
-  const sectionColors = {
-    vision: '#FFFFFF',
-    technology: '#FFFFFF',
-    solutions: '#FFB8D0',
-    impact: '#D0B8FF',
-    stories: '#E8FFF3',
-    leader: '#FFFFFF',
-    ailab: '#0000CD'
-  };
 
   // 添加3D和视差效果
   const parallaxConfig = {
@@ -1170,25 +1197,6 @@ function App() {
 
   const backgroundY = useTransform(scrollYProgress, [0, 1], ['0%', '50%']);
 
-  const scrollProducts = (direction) => {
-    const container = productCarouselRef.current;
-    const scrollAmount = 500; // 增加滚动距离
-    
-    if (container) {
-      const targetScroll = container.scrollLeft + (direction === 'left' ? -scrollAmount : scrollAmount);
-      container.scrollTo({
-        left: targetScroll,
-        behavior: 'smooth'
-      });
-      
-      setActiveCardIndex(prev => 
-        direction === 'left' 
-          ? Math.max(0, prev - 1)
-          : Math.min(productCards.length - 1, prev + 1)
-      );
-    }
-  };
-
   // 更新产品卡片数据（只保留6张）
   const productCards = [
     {
@@ -1223,16 +1231,43 @@ function App() {
     }
   ];
 
-  // 添加 handleVideoChange 函数
-  const handleVideoChange = (index) => {
-    if (index >= 0 && index < mathTutorials.length) {
-      setCurrentVideo(index);
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      setUser(user);
+      if (user) {
+        try {
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists()) {
+            setUserProfile(userDoc.data());
+          }
+        } catch (error) {
+          console.error('Error fetching user profile:', error);
+        }
+      } else {
+        setUserProfile(null);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // 修改 Apply Now 按钮的点击处理
+  const handleApplyClick = () => {
+    if (!user) {
+      setIsAuthModalOpen(true);
+    } else if (userProfile?.premium) {
+      // 如果已经是 premium 用户，显示提示
+      alert('You are already a premium user!');
+    } else {
+      setIsStudentVerificationOpen(true);
     }
   };
 
   return (
     <MouseTracker>
-      <Navbar />
+      <Navbar 
+        isAuthModalOpen={isAuthModalOpen}
+        setIsAuthModalOpen={setIsAuthModalOpen}
+      />
       <div className="App" ref={containerRef}>
         <motion.header className="hero">
           <video 
@@ -1248,10 +1283,11 @@ function App() {
               position: 'absolute',
               top: 0,
               left: 0,
-              transform: `translate3d(0, ${scrollY * 0.5}px, 0)`,
+              transform: `translate3d(0, ${scrollY * 0.6}px, 0)`,
             }}
           >
-            <source src="/videos/dance.mp4" type="video/mp4" />
+            <source src="/videos/black.mp4" type="video/mp4" />
+            <source src="/videos/black.webm" type="video/webm" />
           </video>
           <motion.div 
             className="hero-overlay"
@@ -1264,187 +1300,123 @@ function App() {
           </motion.div>
         </motion.header>
 
-        <motion.section id="vision" className="vision-section" data-bgcolor={sectionColors.vision}>
-          <div className="container">
-            <motion.h2
-              variants={animations.bounce}
-              initial="initial"
-              whileInView="whileInView"
-            >
-              Our Vision
-            </motion.h2>
-            
-            <div className="cards-container" ref={carouselRef1}>
-              <motion.div 
-                className="cards-track"
-                style={{
-                  perspective: 1000,
-                  transformStyle: "preserve-3d"
-                }}
-              >
-                {[...Array(2)].map((_, setIndex) => (
-                  <div key={`track1-${setIndex}`} className="cards-set">
-                    {cardSets.set1.map((card, index) => (
-                      <motion.div
-                        key={`card1-${index}`}
-                        className="vision-card"
-                        whileHover={{ 
-                          rotateY: 15,
-                          rotateX: 15,
-                          scale: 1.1,
-                          boxShadow: "0 25px 50px rgba(0,0,0,0.2)"
-                        }}
-                        transition={{ type: "spring", stiffness: 300 }}
-                      >
-                        <span className="number">{card.number}</span>
-                        <h3>{card.title}</h3>
-                        <p>{card.desc}</p>
-                      </motion.div>
-                    ))}
-                  </div>
-                ))}
-              </motion.div>
-            </div>
-            
-            <div className="cards-container" ref={carouselRef2}>
-              <div className="cards-track">
-                {[...Array(2)].map((_, setIndex) => (
-                  <div key={`track2-${setIndex}`} className="cards-set">
-                    {cardSets.set2.map((card, index) => (
-                      <div key={`card2-${index}`} className="vision-card">
-                        <span className="number">{card.number}</span>
-                        <h3>{card.title}</h3>
-                        <p>{card.desc}</p>
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="cards-container" ref={carouselRef3}>
-              <div className="cards-track">
-                {[...Array(2)].map((_, setIndex) => (
-                  <div key={`track3-${setIndex}`} className="cards-set">
-                    {cardSets.set3.map((card, index) => (
-                      <div key={`card3-${index}`} className="vision-card">
-                        <span className="number">{card.number}</span>
-                        <h3>{card.title}</h3>
-                        <p>{card.desc}</p>
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </motion.section>
-
         <motion.section 
-          id="math-tutorials" 
-          className="math-section"
-          data-bgcolor="#111111"
+          id="student" 
+          className="student-section"
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          transition={{ duration: 0.8 }}
         >
           <div className="container">
-            <div className="math-content">
-              <div className="math-text">
-                <motion.h2
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8 }}
+            <div className="student-content">
+              <motion.div 
+                className="student-image"
+                initial={{ x: -100, opacity: 0 }}
+                whileInView={{ x: 0, opacity: 1 }}
+                transition={{ duration: 0.8 }}
+              >
+                <img 
+                  src="/images/student.png" 
+                  alt="Student Premium" 
+                  className="student-premium-img"
+                />
+              </motion.div>
+              <motion.div 
+                className="student-info"
+                initial={{ x: 100, opacity: 0 }}
+                whileInView={{ x: 0, opacity: 1 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+              >
+                <h2>Student Free Premium Plan</h2>
+                <h3>For students in North America</h3>
+                <p className="student-description">
+                  We are thrilled to announce that students in the United States and Canada can now enjoy one month of free Premium access. 
+                  Experience all the Caloogy's advanced features to the next level.
+                </p>
+                <p className="student-note">
+                  * Students from Shenzhen College of International Education are also eligible for this free premium plan. Students from other countries might be eligible in the future. 
+                </p>
+                <motion.button
+                  className="learn-more-button"
+                  whileHover={{ 
+                    scale: 1.05,
+                    boxShadow: "0 10px 30px rgba(255, 192, 203, 0.4)"
+                  }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleApplyClick}
                 >
-                  New Feature: Maths Tutorial For All Levels
-                </motion.h2>
-                <motion.p
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.2 }}
-                >
-                  {mathTutorials[currentVideo]?.description || 'Loading...'}
-                </motion.p>
-                <div className="tutorial-nav">
-                  {mathTutorials.map((_, index) => (
-                    <motion.button
-                      key={index}
-                      className={`tutorial-button ${currentVideo === index ? 'active' : ''}`}
-                      onClick={() => handleVideoChange(index)}
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      {index + 1}
-                    </motion.button>
-                  ))}
-                </div>
-              </div>
-              
-              <div className="video-stack">
-                {mathTutorials.map((tutorial, index) => (
-                  <MathVideo
-                    key={index}
-                    video={tutorial.video}
-                    isActive={currentVideo === index}
-                  />
-                ))}
-              </div>
+                  Apply Now 🎓
+                </motion.button>
+              </motion.div>
             </div>
           </div>
         </motion.section>
 
-        <motion.section id="technology" className="technology-section" data-bgcolor={sectionColors.technology}>
-          <div className="tech-cards-container">
-            {techCards.map((item, index) => (
-              <motion.div 
-                key={item.title}
-                className="tech-card"
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ 
-                  opacity: 1, 
-                  y: 0,
-                  transition: {
-                    duration: 0.8,
-                    delay: index * 0.2
+        {/* FYSA Activity Section */}
+        <section className="activity-section">
+          <div className="activity-content">
+            <div className="activity-info">
+              <h2>First Year Student Activity</h2>
+              <h3>Experience & Engage</h3>
+              <p className="activity-description">
+                Join our First Year Student Activity (FYSA) program, a dynamic platform designed for freshmen to experience and engage with technology. Through various challenges, competitions, and collaborative projects, you'll have the opportunity to expand your horizons, connect with like-minded peers, and develop essential skills for your future career.
+              </p>
+              <button 
+                className="activity-learn-more"
+                onClick={() => {
+                  if (!user) {
+                    setIsAuthModalOpen(true);
+                  } else {
+                    setIsFYSAVerificationOpen(true);
                   }
                 }}
-                viewport={{ once: false }}
               >
-                <h3>{item.title}</h3>
-                <p>{item.desc}</p>
-              </motion.div>
-            ))}
+                Learn More
+              </button>
+            </div>
+            <div className="activity-image">
+              <img src="/images/activity.png" alt="FYSA Activities" className="activity-img" />
+            </div>
           </div>
-        </motion.section>
+        </section>
 
-        <motion.section id="solutions" className="solutions-section" data-bgcolor={sectionColors.solutions}>
-          <motion.h2 
-            className="stock-title"
-            initial={{ x: -100, opacity: 0 }}
-            whileInView={{ 
-              x: 0, 
-              opacity: 1,
-              transition: {
-                type: "spring",
-                stiffness: 100,
-                damping: 10
-              }
-            }}
-            viewport={{ once: false }}
-          >
-            Analysis and predict stock prices
-          </motion.h2>
-          
-          <StockTicker />
-          
-          <motion.div 
-            className="scroll-indicator"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1 }}
-          >
-            <p>Scroll to explore</p>
-            <div className="scroll-arrow">↓</div>
-          </motion.div>
-          
-          <StockVideo />
+        <motion.section 
+          id="solutions" 
+          className="solutions-section" 
+          data-bgcolor={sectionColors.solutions}
+        >
+          <div className="container">
+            <motion.h2 
+              className="stock-title"
+              initial={{ x: -100, opacity: 0 }}
+              whileInView={{ 
+                x: 0, 
+                opacity: 1,
+                transition: {
+                  type: "spring",
+                  stiffness: 100,
+                  damping: 10
+                }
+              }}
+              viewport={{ once: false }}
+            >
+              Stock Services
+            </motion.h2>
+            
+            <StockTicker />
+            
+            <motion.div 
+              className="scroll-indicator"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1 }}
+            >
+              <p>Scroll to explore</p>
+              <div className="scroll-arrow">↓</div>
+            </motion.div>
+            
+            <StockVideo />
+          </div>
         </motion.section>
 
         <motion.section 
@@ -1477,7 +1449,7 @@ function App() {
               viewport={{ once: false }}
               transition={{ duration: 0.8 }}
             >
-              Our Services (Coming soon...)
+              Made by Caloogy
             </motion.h2>
             
             <div className="services-grid">
@@ -1511,7 +1483,7 @@ function App() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    Learn More
+                    Learn More 🔒
                   </motion.button>
                 </motion.div>
               ))}
@@ -1609,32 +1581,35 @@ function App() {
               >
                 {[
                   {
-                    video: "/videos/v1.mp4",
+                    video: {
+                      mp4: "/videos/v1.mp4",
+                      webm: "/videos/v1.webm"
+                    },
                     title: "AI-Powered Climate Analysis",
                     desc: "Advanced algorithms for environmental monitoring"
                   },
                   {
-                    video: "/videos/v2.mp4",
+                    video: {
+                      mp4: "/videos/v2.mp4",
+                      webm: "/videos/v2.webm"
+                    },
                     title: "Smart Financial Planning",
                     desc: "Intelligent investment strategies"
                   },
                   {
-                    video: "/videos/v3.mp4",
+                    video: {
+                      mp4: "/videos/v3.mp4",
+                      webm: "/videos/v3.webm"
+                    },
                     title: "Healthcare Innovation",
                     desc: "Revolutionary medical diagnosis"
                   },
+                 
                   {
-                    video: "/videos/v4.mp4",
-                    title: "Education Technology",
-                    desc: "Personalized learning experience"
-                  },
-                  {
-                    video: "/videos/v5.mp4",
-                    title: "Smart City Solutions",
-                    desc: "Urban planning optimization"
-                  },
-                  {
-                    video: "/videos/v6.mp4",
+                    video: {
+                      mp4: "/videos/v6.mp4",
+                      webm: "/videos/v6.webm"
+                    },
                     title: "Robotics Integration",
                     desc: "Next-generation automation"
                   }
@@ -1653,7 +1628,8 @@ function App() {
                         playsInline
                         className="product-video"
                       >
-                        <source src={item.video} type="video/mp4" />
+                        <source src={item.video.mp4} type="video/mp4" />
+                        <source src={item.video.webm} type="video/webm" />
                       </video>
                     </div>
                     <div className="product-content">
@@ -1718,6 +1694,7 @@ function App() {
                   playsInline
                 >
                   <source src="/videos/robot.mp4" type="video/mp4" />
+                  <source src="/videos/robot.webm" type="video/webm" />
                 </video>
                 <div className="story-content">
                   <span className="story-tag">Featured</span>
@@ -1743,6 +1720,7 @@ function App() {
                   playsInline
                 >
                   <source src="/videos/ski.mp4" type="video/mp4" />
+                  <source src="/videos/ski.webm" type="video/webm" />
                 </video>
                 <div className="story-content">
                   <h3>Enhance sports performance to a new era</h3>
@@ -1766,6 +1744,7 @@ function App() {
                   playsInline
                 >
                   <source src="/videos/chess.mp4" type="video/mp4" />
+                  <source src="/videos/chess.webm" type="video/webm" />
                 </video>
                 <div className="story-content">
                   <h3>A chess master powered by Caloogy AI</h3>
@@ -1811,16 +1790,25 @@ function App() {
                 whileInView={{ x: 0, opacity: 1 }}
                 transition={{ duration: 0.6, delay: 0.4 }}
               >
-                <h2>Theo Zhang</h2>
-                <p className="leader-title">Founder of Caloogy AI</p>
+                <h2>Xinyang Zhang</h2>
+                <p className="leader-title">Founder & CEO of Caloogy</p>
                 <p className="leader-quote">
                   "Our mission is to make AI accessible and beneficial for everyone, creating technology that enhances human potential rather than replacing it."
                 </p>
                 <motion.a
-                  href="http://itsmyspace.xyz"
+                  href={userProfile?.premium ? "https://theozhang.xyz" : "#"}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="personal-website-btn"
+                  onClick={(e) => {
+                    if (!user) {
+                      e.preventDefault();
+                      alert('Please sign in to view the personal website');
+                    } else if (!userProfile?.premium) {
+                      e.preventDefault();
+                      alert('This feature is only available for premium users');
+                    }
+                  }}
                   whileHover={{ 
                     scale: 1.05,
                     boxShadow: "0 10px 30px rgba(255, 192, 203, 0.4)"
@@ -1902,6 +1890,9 @@ function App() {
             </div>
           </div>
         </motion.section>
+
+        <NewYorkSection />
+        <MarsSection />
       </div>
       <section className="location-section">
         <div className="container">
@@ -1938,16 +1929,16 @@ function App() {
               whileInView={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
             >
-              <h3>Los Angeles, CA</h3>
+              <h3>Ridgeland, MS</h3>
               <iframe 
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3305.7152203073836!2d-118.4003!3d34.0736!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x80c2bc04d6d147ab%3A0xd6c7c379fd081ed1!2sBeverly%20Hills%2C%20CA%2090210!5e0!3m2!1sen!2sus!4v1625000000000!5m2!1sen!2sus"
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3362.8655563268584!2d-90.15799548483814!3d32.41843998109543!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8628514d93f2c4ef%3A0x7c0c2f4c49f840a0!2s270%20Trace%20Colony%20Park%20Dr%20Suite%20B%2C%20Ridgeland%2C%20MS%2039157!5e0!3m2!1sen!2sus!4v1625000000000!5m2!1sen!2sus"
                 width="100%" 
                 height="400" 
                 style={{ border: 0 }} 
                 allowFullScreen="" 
                 loading="lazy"
               ></iframe>
-              <p className="map-address">Beverly Hills, Los Angeles, California, United States</p>
+              <p className="map-address">270 Trace Colony Park STE B, Ridgeland, MS 39157 USA</p>
             </motion.div>
           </div>
         </div>
@@ -1973,8 +1964,9 @@ function App() {
             >
               <div className="contact-icon">📧</div>
               <h3>Email</h3>
-              <p>info@aicompany.com</p>
-              <p>support@aicompany.com</p>
+              <p>xinyang.zhang@caloogy.com</p>
+              
+             
             </motion.div>
 
             <motion.div 
@@ -1984,10 +1976,9 @@ function App() {
               viewport={{ once: false }}
               transition={{ duration: 0.8, delay: 0.4 }}
             >
-              <div className="contact-icon">📞</div>
-              <h3>Phone</h3>
-              <p>+1 (555) 123-4567</p>
-              <p>+1 (555) 987-6543</p>
+              <div className="contact-icon">🔗</div>
+              <h3>LinkedIn</h3>
+              <p>Caloogy</p>
             </motion.div>
 
             <motion.div 
@@ -1998,9 +1989,9 @@ function App() {
               transition={{ duration: 0.8, delay: 0.6 }}
             >
               <div className="contact-icon">🏢</div>
-              <h3>Office</h3>
-              <p>123 AI Street</p>
-              <p>Tech City, TC 12345</p>
+              <h3>Location</h3>
+              <p>Antuoshan 6th Road</p>
+              <p>Shenzhen, GD, P.R.C</p>
             </motion.div>
 
             <motion.div 
@@ -2019,6 +2010,24 @@ function App() {
         </div>
       </motion.section>
       <Footer />
+      <AnimatePresence>
+        {isStudentVerificationOpen && (
+          <StudentVerificationModal
+            user={user}
+            userProfile={userProfile}
+            onClose={() => setIsStudentVerificationOpen(false)}
+            onVerificationComplete={(updatedProfile) => setUserProfile(updatedProfile)}
+          />
+        )}
+        {isFYSAVerificationOpen && (
+          <FYSAVerificationModal
+            user={user}
+            userProfile={userProfile}
+            onClose={() => setIsFYSAVerificationOpen(false)}
+            onVerificationComplete={(updatedProfile) => setUserProfile(updatedProfile)}
+          />
+        )}
+      </AnimatePresence>
     </MouseTracker>
   );
 }
