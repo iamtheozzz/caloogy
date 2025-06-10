@@ -1,2 +1,1 @@
-This is the home of Caloogy AI
-Enjoy~
+This is the home of Caloogy AI ~
